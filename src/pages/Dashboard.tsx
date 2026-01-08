@@ -1,18 +1,32 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { TopNav } from '@/components/dashboard/TopNav';
 import { CommunityFeed } from '@/components/dashboard/CommunityFeed';
+import { OpportunitiesPage } from '@/components/dashboard/OpportunitiesPage';
+import { MessagesPage } from '@/components/dashboard/MessagesPage';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const { isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const location = useLocation();
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
+
+  const renderContent = () => {
+    switch (location.pathname) {
+      case '/dashboard/opportunities':
+        return <OpportunitiesPage />;
+      case '/dashboard/messages':
+        return <MessagesPage />;
+      default:
+        return <CommunityFeed />;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -28,7 +42,7 @@ export default function Dashboard() {
         <TopNav onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)} />
         
         <main className="p-6">
-          <CommunityFeed />
+          {renderContent()}
         </main>
       </div>
     </div>

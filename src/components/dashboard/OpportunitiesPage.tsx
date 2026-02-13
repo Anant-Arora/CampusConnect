@@ -11,6 +11,7 @@ import {
   Bookmark,
   BookmarkCheck
 } from 'lucide-react';
+import { ApplyPage } from './ApplyPage';
 
 interface Opportunity {
   id: string;
@@ -87,7 +88,7 @@ function daysUntil(date: Date): number {
   return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
+function OpportunityCard({ opportunity, onApply }: { opportunity: Opportunity; onApply: (opp: Opportunity) => void }) {
   const [saved, setSaved] = useState(false);
   const daysLeft = daysUntil(opportunity.deadline);
 
@@ -141,7 +142,7 @@ function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
         </div>
       </div>
 
-      <Button className="w-full mt-4" variant="soft">
+      <Button className="w-full mt-4" variant="soft" onClick={() => onApply(opportunity)}>
         Apply Now <ExternalLink className="w-4 h-4 ml-1" />
       </Button>
     </div>
@@ -151,6 +152,11 @@ function OpportunityCard({ opportunity }: { opportunity: Opportunity }) {
 export function OpportunitiesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [applyingTo, setApplyingTo] = useState<Opportunity | null>(null);
+
+  if (applyingTo) {
+    return <ApplyPage opportunity={applyingTo} onBack={() => setApplyingTo(null)} />;
+  }
 
   const filteredOpportunities = sampleOpportunities.filter((opp) => {
     const matchesSearch = opp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -209,7 +215,7 @@ export function OpportunitiesPage() {
       <div className="grid md:grid-cols-2 gap-4">
         {filteredOpportunities.map((opportunity, index) => (
           <div key={opportunity.id} style={{ animationDelay: `${index * 0.1}s` }}>
-            <OpportunityCard opportunity={opportunity} />
+            <OpportunityCard opportunity={opportunity} onApply={setApplyingTo} />
           </div>
         ))}
       </div>

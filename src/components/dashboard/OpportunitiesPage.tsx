@@ -6,26 +6,26 @@ import {
   Clock, 
   Building2, 
   ExternalLink, 
-  Filter, 
   Search,
   Bookmark,
   BookmarkCheck
 } from 'lucide-react';
 import { ApplyPage } from './ApplyPage';
+import { PostOpportunityForm } from './PostOpportunityForm';
 
 interface Opportunity {
   id: string;
   title: string;
   company: string;
   location: string;
-  type: 'Internship' | 'Full-time' | 'Part-time' | 'Hackathon' | 'Research';
+  type: string;
   postedAt: Date;
   deadline: Date;
   description: string;
   skills: string[];
 }
 
-const sampleOpportunities: Opportunity[] = [
+const initialOpportunities: Opportunity[] = [
   {
     id: '1',
     title: 'Software Engineering Intern',
@@ -80,10 +80,6 @@ const typeColors: Record<string, string> = {
   'Research': 'bg-violet-100 text-violet-700',
 };
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
 function daysUntil(date: Date): number {
   return Math.ceil((date.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
@@ -104,44 +100,25 @@ function OpportunityCard({ opportunity, onApply }: { opportunity: Opportunity; o
             <p className="text-sm text-muted-foreground">{opportunity.company}</p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setSaved(!saved)}
-          className={saved ? 'text-primary' : 'text-muted-foreground'}
-        >
+        <Button variant="ghost" size="icon" onClick={() => setSaved(!saved)} className={saved ? 'text-primary' : 'text-muted-foreground'}>
           {saved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
         </Button>
       </div>
-
       <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{opportunity.description}</p>
-
       <div className="flex flex-wrap gap-2 mb-4">
         {opportunity.skills.map((skill) => (
-          <span key={skill} className="px-2.5 py-1 rounded-full bg-muted text-xs font-medium text-muted-foreground">
-            {skill}
-          </span>
+          <span key={skill} className="px-2.5 py-1 rounded-full bg-muted text-xs font-medium text-muted-foreground">{skill}</span>
         ))}
       </div>
-
       <div className="flex items-center justify-between pt-4 border-t border-border">
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-4 h-4" />
-            {opportunity.location}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4" />
-            {daysLeft} days left
-          </div>
+          <div className="flex items-center gap-1.5"><MapPin className="w-4 h-4" />{opportunity.location}</div>
+          <div className="flex items-center gap-1.5"><Clock className="w-4 h-4" />{daysLeft} days left</div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${typeColors[opportunity.type]}`}>
-            {opportunity.type}
-          </span>
-        </div>
+        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${typeColors[opportunity.type] || 'bg-muted text-muted-foreground'}`}>
+          {opportunity.type}
+        </span>
       </div>
-
       <Button className="w-full mt-4" variant="soft" onClick={() => onApply(opportunity)}>
         Apply Now <ExternalLink className="w-4 h-4 ml-1" />
       </Button>
@@ -150,15 +127,39 @@ function OpportunityCard({ opportunity, onApply }: { opportunity: Opportunity; o
 }
 
 export function OpportunitiesPage() {
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [applyingTo, setApplyingTo] = useState<Opportunity | null>(null);
+  const [showPostForm, setShowPostForm] = useState(false);
 
   if (applyingTo) {
     return <ApplyPage opportunity={applyingTo} onBack={() => setApplyingTo(null)} />;
   }
 
-  const filteredOpportunities = sampleOpportunities.filter((opp) => {
+  if (showPostForm) {
+    return (
+      <PostOpportunityForm
+        onBack={() => setShowPostForm(false)}
+        onSubmit={(data) => {
+          const newOpp: Opportunity = {
+            id: Date.now().toString(),
+            title: data.title,
+            company: data.company,
+            location: data.location,
+            type: data.type,
+            postedAt: new Date(),
+            deadline: new Date(data.deadline),
+            description: data.description,
+            skills: data.skills,
+          };
+          setOpportunities([newOpp, ...opportunities]);
+        }}
+      />
+    );
+  }
+
+  const filteredOpportunities = opportunities.filter((opp) => {
     const matchesSearch = opp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       opp.company.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = !selectedType || opp.type === selectedType;
@@ -174,36 +175,21 @@ export function OpportunitiesPage() {
           <h1 className="text-2xl font-bold text-foreground">Opportunities</h1>
           <p className="text-muted-foreground mt-1">Discover internships, jobs, and events</p>
         </div>
-        <Button variant="gradient">
+        <Button variant="gradient" onClick={() => setShowPostForm(true)}>
           <Briefcase className="w-4 h-4 mr-2" />
           Post Opportunity
         </Button>
       </div>
 
-      {/* Filters */}
       <div className="card-elevated p-4 mb-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search opportunities..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="input-field pl-10"
-            />
+            <input type="text" placeholder="Search opportunities..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="input-field pl-10" />
           </div>
           <div className="flex gap-2 flex-wrap">
             {types.map((type) => (
-              <button
-                key={type}
-                onClick={() => setSelectedType(selectedType === type ? null : type)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
-                  selectedType === type
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-secondary'
-                }`}
-              >
+              <button key={type} onClick={() => setSelectedType(selectedType === type ? null : type)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${selectedType === type ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-secondary'}`}>
                 {type}
               </button>
             ))}
@@ -211,7 +197,6 @@ export function OpportunitiesPage() {
         </div>
       </div>
 
-      {/* Opportunities Grid */}
       <div className="grid md:grid-cols-2 gap-4">
         {filteredOpportunities.map((opportunity, index) => (
           <div key={opportunity.id} style={{ animationDelay: `${index * 0.1}s` }}>

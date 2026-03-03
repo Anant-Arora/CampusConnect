@@ -4,11 +4,12 @@
   "private": true,
   "main": "dist/server.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "migrate": "prisma migrate dev",
-    "generate": "prisma generate"
+  "dev": "ts-node-dev --respawn src/server.ts",
+  "build": "tsc",
+  "start": "node dist/server.js",
+  "migrate": "prisma migrate dev",
+  "generate": "prisma generate",
+  "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.16.1",

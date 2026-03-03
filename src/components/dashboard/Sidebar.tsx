@@ -3,8 +3,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Home, 
-  Users, 
-  Search, 
   Briefcase, 
   MessageSquare, 
   Bell, 
@@ -24,8 +22,6 @@ interface SidebarProps {
 
 const navItems = [
   { icon: Home, label: 'Feed', path: '/dashboard' },
-  { icon: Users, label: 'Community', path: '/dashboard/community' },
-  { icon: Search, label: 'Discover', path: '/dashboard/discover' },
   { icon: Briefcase, label: 'Opportunities', path: '/dashboard/opportunities' },
   { icon: Crown, label: 'Find CEO', path: '/dashboard/find-ceo' },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },

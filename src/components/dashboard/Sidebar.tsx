@@ -11,7 +11,8 @@ import {
   Settings, 
   LogOut, 
   ChevronLeft,
-  GraduationCap
+  GraduationCap,
+  Crown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,6 +27,7 @@ const navItems = [
   { icon: Users, label: 'Community', path: '/dashboard/community' },
   { icon: Search, label: 'Discover', path: '/dashboard/discover' },
   { icon: Briefcase, label: 'Opportunities', path: '/dashboard/opportunities' },
+  { icon: Crown, label: 'Find CEO', path: '/dashboard/find-ceo' },
   { icon: MessageSquare, label: 'Messages', path: '/dashboard/messages' },
 ];
 

@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { TopNav } from '@/components/dashboard/TopNav';
 import { CommunityFeed } from '@/components/dashboard/CommunityFeed';
 import { OpportunitiesPage } from '@/components/dashboard/OpportunitiesPage';
 import { MessagesPage } from '@/components/dashboard/MessagesPage';
+import { FindCEOPage } from '@/components/dashboard/FindCEOPage';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const { isAuthenticated } = useAuth();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (!isAuthenticated) {
     return <Navigate to="/" replace />;
   }
 
+  const navigateToMessages = (personName: string) => {
+    navigate('/dashboard/messages');
+  };
+
   const renderContent = () => {
     switch (location.pathname) {
       case '/dashboard/opportunities':
         return <OpportunitiesPage />;
+      case '/dashboard/find-ceo':
+        return <FindCEOPage onNavigateToMessages={navigateToMessages} />;
       case '/dashboard/messages':
         return <MessagesPage />;
       default:

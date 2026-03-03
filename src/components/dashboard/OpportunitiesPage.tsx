@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { ApplyPage } from './ApplyPage';
 import { PostOpportunityForm } from './PostOpportunityForm';
+import { useCreateOpportunity, useOpportunities, useSaveOpportunity, useUnsaveOpportunity } from '@/hooks/useOpportunities';
 
 interface Opportunity {
   id: string;
@@ -23,54 +24,8 @@ interface Opportunity {
   deadline: Date;
   description: string;
   skills: string[];
+  isSaved?: boolean;
 }
-
-const initialOpportunities: Opportunity[] = [
-  {
-    id: '1',
-    title: 'Software Engineering Intern',
-    company: 'Google',
-    location: 'Mountain View, CA',
-    type: 'Internship',
-    postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14),
-    description: 'Join our team to work on cutting-edge products used by billions of users worldwide.',
-    skills: ['Python', 'Data Structures', 'Algorithms'],
-  },
-  {
-    id: '2',
-    title: 'Product Design Intern',
-    company: 'Figma',
-    location: 'Remote',
-    type: 'Internship',
-    postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 21),
-    description: 'Help design the future of collaborative design tools.',
-    skills: ['UI/UX', 'Figma', 'Prototyping'],
-  },
-  {
-    id: '3',
-    title: 'AI/ML Research Assistant',
-    company: 'MIT CSAIL',
-    location: 'Cambridge, MA',
-    type: 'Research',
-    postedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 1),
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
-    description: 'Work on cutting-edge machine learning research projects.',
-    skills: ['PyTorch', 'Machine Learning', 'Research'],
-  },
-  {
-    id: '4',
-    title: 'Global Hackathon 2024',
-    company: 'MLH',
-    location: 'Virtual',
-    type: 'Hackathon',
-    postedAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    deadline: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-    description: '48-hour hackathon with amazing prizes and mentorship opportunities.',
-    skills: ['Any Stack', 'Creativity', 'Teamwork'],
-  },
-];
 
 const typeColors: Record<string, string> = {
   'Internship': 'bg-primary/10 text-primary',
@@ -85,8 +40,14 @@ function daysUntil(date: Date): number {
 }
 
 function OpportunityCard({ opportunity, onApply }: { opportunity: Opportunity; onApply: (opp: Opportunity) => void }) {
-  const [saved, setSaved] = useState(false);
+  const saveOpp = useSaveOpportunity();
+  const unsaveOpp = useUnsaveOpportunity();
+  const [saved, setSaved] = useState(!!opportunity.isSaved);
   const daysLeft = daysUntil(opportunity.deadline);
+
+  React.useEffect(() => {
+    setSaved(!!opportunity.isSaved);
+  }, [opportunity.isSaved]);
 
   return (
     <div className="card-elevated p-5 hover:shadow-medium transition-all duration-200 animate-slide-up">
@@ -100,7 +61,20 @@ function OpportunityCard({ opportunity, onApply }: { opportunity: Opportunity; o
             <p className="text-sm text-muted-foreground">{opportunity.company}</p>
           </div>
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setSaved(!saved)} className={saved ? 'text-primary' : 'text-muted-foreground'}>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => {
+            if (saved) {
+              setSaved(false);
+              unsaveOpp.mutate(opportunity.id);
+            } else {
+              setSaved(true);
+              saveOpp.mutate(opportunity.id);
+            }
+          }}
+          className={saved ? 'text-primary' : 'text-muted-foreground'}
+        >
           {saved ? <BookmarkCheck className="w-5 h-5" /> : <Bookmark className="w-5 h-5" />}
         </Button>
       </div>
@@ -127,11 +101,12 @@ function OpportunityCard({ opportunity, onApply }: { opportunity: Opportunity; o
 }
 
 export function OpportunitiesPage() {
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [applyingTo, setApplyingTo] = useState<Opportunity | null>(null);
   const [showPostForm, setShowPostForm] = useState(false);
+  const list = useOpportunities({ type: selectedType, search: searchQuery, page: 1, limit: 50 });
+  const create = useCreateOpportunity();
 
   if (applyingTo) {
     return <ApplyPage opportunity={applyingTo} onBack={() => setApplyingTo(null)} />;
@@ -142,29 +117,33 @@ export function OpportunitiesPage() {
       <PostOpportunityForm
         onBack={() => setShowPostForm(false)}
         onSubmit={(data) => {
-          const newOpp: Opportunity = {
-            id: Date.now().toString(),
+          create.mutate({
             title: data.title,
             company: data.company,
-            location: data.location,
-            type: data.type,
-            postedAt: new Date(),
-            deadline: new Date(data.deadline),
             description: data.description,
+            type: data.type,
             skills: data.skills,
-          };
-          setOpportunities([newOpp, ...opportunities]);
+            location: data.location,
+            isRemote: data.location.toLowerCase() === "remote",
+            deadline: data.deadline,
+          });
         }}
       />
     );
   }
 
-  const filteredOpportunities = opportunities.filter((opp) => {
-    const matchesSearch = opp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      opp.company.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesType = !selectedType || opp.type === selectedType;
-    return matchesSearch && matchesType;
-  });
+  const filteredOpportunities: Opportunity[] = (list.data?.opportunities ?? []).map((o: any) => ({
+    id: o.id,
+    title: o.title,
+    company: o.company,
+    location: o.location ?? (o.isRemote ? "Remote" : ""),
+    type: o.type,
+    postedAt: new Date(o.createdAt),
+    deadline: o.deadline ? new Date(o.deadline) : new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+    description: o.description,
+    skills: Array.isArray(o.skills) ? o.skills : [],
+    isSaved: !!o.isSaved,
+  }));
 
   const types = ['Internship', 'Full-time', 'Research', 'Hackathon'];
 

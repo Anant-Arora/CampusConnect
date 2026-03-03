@@ -1,41 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Heart, MessageCircle, Share2, MoreHorizontal, Image, Link2, Send, Search } from 'lucide-react';
-import { Post } from '@/types/user';
+import { useCreatePost, useLikePost, usePosts, useUnlikePost } from '@/hooks/usePosts';
 
-const initialPosts: Post[] = [
-  {
-    id: '1',
-    authorId: '1',
-    authorName: 'Sarah Chen',
-    authorCollege: 'MIT',
-    content: 'Just finished my machine learning project on neural networks! 🧠 Really excited about the results we got on the validation set. Anyone else working on similar projects?',
-    likes: 42,
-    comments: 8,
-    createdAt: new Date(Date.now() - 1000 * 60 * 30),
-  },
-  {
-    id: '2',
-    authorId: '2',
-    authorName: 'James Rodriguez',
-    authorCollege: 'Stanford University',
-    content: 'Looking for teammates for the upcoming hackathon next weekend! Need a designer and a backend developer. Drop a comment if interested! 🚀',
-    likes: 28,
-    comments: 15,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
-  },
-  {
-    id: '3',
-    authorId: '3',
-    authorName: 'Priya Sharma',
-    authorCollege: 'Carnegie Mellon',
-    content: 'Great workshop on system design today! Learned so much about distributed systems and microservices architecture. Thanks to everyone who attended! 💡',
-    likes: 56,
-    comments: 12,
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5),
-  },
-];
+type FeedPost = {
+  id: string;
+  content: string;
+  createdAt: string | Date;
+  likesCount: number;
+  commentsCount: number;
+  hasLiked: boolean;
+  user: { id: string; fullName: string; college: string; avatarUrl?: string | null };
+};
 
 function formatTimeAgo(date: Date): string {
   const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -48,13 +25,26 @@ function formatTimeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-function PostCard({ post }: { post: Post }) {
-  const [liked, setLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.likes);
+function PostCard({ post, onLike, onUnlike }: { post: FeedPost; onLike: (id: string) => void; onUnlike: (id: string) => void }) {
+  const [liked, setLiked] = useState(post.hasLiked);
+  const [likeCount, setLikeCount] = useState(post.likesCount);
+
+  useEffect(() => {
+    setLiked(post.hasLiked);
+    setLikeCount(post.likesCount);
+  }, [post.hasLiked, post.likesCount]);
 
   const handleLike = () => {
-    setLiked(!liked);
-    setLikeCount(prev => liked ? prev - 1 : prev + 1);
+    if (liked) {
+      setLiked(false);
+      setLikeCount((prev) => Math.max(0, prev - 1));
+      onUnlike(post.id);
+      return;
+    }
+
+    setLiked(true);
+    setLikeCount((prev) => prev + 1);
+    onLike(post.id);
   };
 
   return (
@@ -63,12 +53,12 @@ function PostCard({ post }: { post: Post }) {
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-sm font-semibold text-primary">
-              {post.authorName.charAt(0)}
+              {post.user.fullName.charAt(0)}
             </span>
           </div>
           <div>
-            <h4 className="font-medium text-foreground">{post.authorName}</h4>
-            <p className="text-sm text-muted-foreground">{post.authorCollege} · {formatTimeAgo(post.createdAt)}</p>
+            <h4 className="font-medium text-foreground">{post.user.fullName}</h4>
+            <p className="text-sm text-muted-foreground">{post.user.college} · {formatTimeAgo(new Date(post.createdAt))}</p>
           </div>
         </div>
         <Button variant="ghost" size="icon" className="text-muted-foreground">
@@ -90,7 +80,7 @@ function PostCard({ post }: { post: Post }) {
         </Button>
         <Button variant="ghost" size="sm" className="text-muted-foreground">
           <MessageCircle className="w-4 h-4 mr-1.5" />
-          {post.comments}
+          {post.commentsCount}
         </Button>
         <Button variant="ghost" size="sm" className="text-muted-foreground">
           <Share2 className="w-4 h-4 mr-1.5" />
@@ -152,26 +142,22 @@ function CreatePostCard({ onPost }: { onPost: (content: string) => void }) {
 
 export function CommunityFeed() {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const postsQuery = usePosts(10);
+  const createPost = useCreatePost();
+  const likePost = useLikePost();
+  const unlikePost = useUnlikePost();
   const [searchQuery, setSearchQuery] = useState('');
 
   const handleNewPost = (content: string) => {
-    const newPost: Post = {
-      id: Date.now().toString(),
-      authorId: user?.id || 'me',
-      authorName: user?.fullName || 'You',
-      authorCollege: user?.collegeName || '',
-      content,
-      likes: 0,
-      comments: 0,
-      createdAt: new Date(),
-    };
-    setPosts([newPost, ...posts]);
+    createPost.mutate({ content });
   };
 
-  const filteredPosts = posts.filter((post) =>
-    post.authorName.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const allPosts: FeedPost[] = useMemo(() => {
+    const pages = postsQuery.data?.pages ?? [];
+    return pages.flatMap((p: any) => p.posts) as FeedPost[];
+  }, [postsQuery.data]);
+
+  const filteredPosts = allPosts.filter((post) => post.user.fullName.toLowerCase().includes(searchQuery.toLowerCase()));
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -196,7 +182,7 @@ export function CommunityFeed() {
       <div className="space-y-4">
         {filteredPosts.map((post, index) => (
           <div key={post.id} style={{ animationDelay: `${index * 0.1}s` }}>
-            <PostCard post={post} />
+            <PostCard post={post} onLike={(id) => likePost.mutate(id)} onUnlike={(id) => unlikePost.mutate(id)} />
           </div>
         ))}
         {filteredPosts.length === 0 && (

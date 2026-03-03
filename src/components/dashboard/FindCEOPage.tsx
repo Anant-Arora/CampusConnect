@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
 import { Search, MessageSquare, MapPin, GraduationCap, Star, Filter, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSearchUsers } from '@/hooks/useUsers';
+import { useStartConversation } from '@/hooks/useMessages';
 
 interface Person {
   id: string;
@@ -16,17 +17,6 @@ interface Person {
   rating: number;
   isOnline: boolean;
 }
-
-const samplePeople: Person[] = [
-  { id: '1', name: 'Sarah Chen', college: 'MIT', degree: 'MBA', location: 'Boston, MA', skills: ['Leadership', 'Strategy', 'Product Management', 'AI/ML', 'Fundraising'], interests: ['Tech Startups', 'FinTech'], rating: 4.9, isOnline: true },
-  { id: '2', name: 'James Rodriguez', college: 'Stanford', degree: 'MS Computer Science', location: 'San Francisco, CA', skills: ['Full Stack Development', 'AI/ML', 'Cloud Architecture', 'Data Science', 'DevOps'], interests: ['SaaS', 'Deep Learning'], rating: 4.8, isOnline: true },
-  { id: '3', name: 'Priya Sharma', college: 'Carnegie Mellon', degree: 'MS Business Analytics', location: 'Pittsburgh, PA', skills: ['Data Science', 'Business Strategy', 'Marketing', 'Python', 'SQL'], interests: ['EdTech', 'Analytics'], rating: 4.7, isOnline: false },
-  { id: '4', name: 'Alex Kim', college: 'Berkeley', degree: 'BS Electrical Engineering', location: 'Oakland, CA', skills: ['Hardware Design', 'IoT', 'Embedded Systems', 'Python', 'Leadership'], interests: ['Hardware Startups', 'CleanTech'], rating: 4.6, isOnline: false },
-  { id: '5', name: 'Maya Johnson', college: 'Harvard', degree: 'MBA', location: 'New York, NY', skills: ['Fundraising', 'Strategy', 'Finance', 'Leadership', 'Sales'], interests: ['FinTech', 'Impact Investing'], rating: 4.9, isOnline: true },
-  { id: '6', name: 'Raj Patel', college: 'Georgia Tech', degree: 'MS Computer Science', location: 'Atlanta, GA', skills: ['Blockchain', 'Smart Contracts', 'Full Stack Development', 'Cloud Architecture', 'Security'], interests: ['Web3', 'DeFi'], rating: 4.5, isOnline: false },
-  { id: '7', name: 'Emily Wang', college: 'Columbia', degree: 'MS Data Science', location: 'New York, NY', skills: ['AI/ML', 'NLP', 'Data Science', 'Python', 'Research'], interests: ['HealthTech', 'AI Ethics'], rating: 4.8, isOnline: true },
-  { id: '8', name: 'Carlos Martinez', college: 'Wharton', degree: 'MBA', location: 'Philadelphia, PA', skills: ['Marketing', 'Growth Hacking', 'Sales', 'Product Management', 'Strategy'], interests: ['E-commerce', 'D2C'], rating: 4.7, isOnline: false },
-];
 
 const popularSkills = ['Leadership', 'AI/ML', 'Strategy', 'Full Stack Development', 'Data Science', 'Marketing', 'Fundraising', 'Product Management'];
 
@@ -88,10 +78,11 @@ function PersonCard({ person, onMessage }: { person: Person; onMessage: (person:
 }
 
 export function FindCEOPage({ onNavigateToMessages }: { onNavigateToMessages?: (personName: string) => void }) {
-  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
   const [messageSent, setMessageSent] = useState<string | null>(null);
+  const results = useSearchUsers(searchQuery, selectedSkills);
+  const startConversation = useStartConversation();
 
   const toggleSkill = (skill: string) => {
     setSelectedSkills((prev) =>
@@ -104,26 +95,29 @@ export function FindCEOPage({ onNavigateToMessages }: { onNavigateToMessages?: (
     setSelectedSkills([]);
   };
 
-  const filteredPeople = samplePeople.filter((person) => {
-    const queryLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      !searchQuery ||
-      person.skills.some((s) => s.toLowerCase().includes(queryLower)) ||
-      person.name.toLowerCase().includes(queryLower) ||
-      person.interests.some((i) => i.toLowerCase().includes(queryLower));
+  const people: Person[] = (results.data ?? []).map((u: any) => ({
+    id: u.id,
+    name: u.fullName,
+    college: u.college,
+    degree: u.degree,
+    location: u.location ?? '',
+    skills: Array.isArray(u.skills) ? u.skills : [],
+    interests: [],
+    rating: u.rating ?? 0,
+    isOnline: !!u.isOnline,
+  }));
 
-    const matchesSkills =
-      selectedSkills.length === 0 ||
-      selectedSkills.some((skill) =>
-        person.skills.some((s) => s.toLowerCase() === skill.toLowerCase())
-      );
+  const filteredPeople = people;
 
-    return matchesSearch && matchesSkills;
-  });
-
-  const handleMessage = (person: Person) => {
+  const handleMessage = async (person: Person) => {
     setMessageSent(person.name);
     setTimeout(() => setMessageSent(null), 3000);
+    try {
+      const conversation = await startConversation.mutateAsync({ recipientId: person.id });
+      localStorage.setItem("campusconnect_selected_conversation_id", conversation.id);
+    } catch {
+      // ignore
+    }
     if (onNavigateToMessages) {
       onNavigateToMessages(person.name);
     }

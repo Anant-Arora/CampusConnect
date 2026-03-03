@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { User as UserIcon, Mail, Phone, GraduationCap, BookOpen, Sparkles, Briefcase, ArrowRight } from 'lucide-react';
+import { User as UserIcon, Mail, Phone, GraduationCap, BookOpen, Sparkles, Briefcase, ArrowRight, Lock } from 'lucide-react';
 import { User } from '@/types/user';
+import { useLogin, useRegister } from '@/hooks/useAuth';
+import { saveUser as saveStoredUser } from '@/lib/auth';
 
 const INTEREST_OPTIONS = [
   'Technology', 'Design', 'Business', 'Arts', 'Science', 
@@ -17,13 +18,16 @@ const SKILL_OPTIONS = [
 ];
 
 export function SignUpForm() {
-  const navigate = useNavigate();
   const { login } = useAuth();
+  const registerMutation = useRegister();
+  const loginMutation = useLogin();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
     email: '',
+    password: '',
+    confirmPassword: '',
     collegeName: '',
     degree: '',
     interests: [] as string[],
@@ -43,20 +47,67 @@ export function SignUpForm() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const mapBackendUserToFrontend = (u: any): User => ({
+    id: u.id,
+    fullName: u.fullName,
+    phone: u.phone ?? '',
+    email: u.email,
+    collegeName: u.college ?? '',
+    degree: u.degree ?? '',
+    interests: [],
+    skills: Array.isArray(u.skills) ? u.skills : [],
+    avatar: u.avatarUrl ?? undefined,
+    createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newUser: User = {
-      id: crypto.randomUUID(),
-      ...formData,
-      createdAt: new Date(),
+
+    const password = formData.password;
+    if (password.length < 8) return;
+    if (formData.confirmPassword !== password) return;
+
+    const payload = {
+      fullName: formData.fullName,
+      email: formData.email,
+      phone: formData.phone,
+      password,
+      college: formData.collegeName,
+      degree: formData.degree,
+      skills: formData.skills,
     };
-    
-    login(newUser);
-    navigate('/dashboard');
+
+    try {
+      const resp = await loginMutation.mutateAsync({ email: payload.email, password: payload.password });
+      if (resp.success) {
+        const mapped = mapBackendUserToFrontend(resp.data.user);
+        saveStoredUser(mapped);
+        login(mapped);
+        return;
+      }
+    } catch {
+      // ignore and fall back to registration
+    }
+
+    const resp = await registerMutation.mutateAsync(payload);
+    if (resp.success) {
+      const mapped = mapBackendUserToFrontend(resp.data.user);
+      saveStoredUser(mapped);
+      login(mapped);
+    }
   };
 
-  const canProceedStep1 = formData.fullName && formData.email && formData.phone;
+  const passwordTooShort = formData.password.length > 0 && formData.password.length < 8;
+  const passwordMismatch =
+    formData.confirmPassword.length > 0 && formData.confirmPassword !== formData.password;
+
+  const canProceedStep1 =
+    formData.fullName &&
+    formData.email &&
+    formData.phone &&
+    formData.password.length >= 8 &&
+    formData.confirmPassword &&
+    !passwordMismatch;
   const canProceedStep2 = formData.collegeName && formData.degree;
   const canSubmit = formData.interests.length > 0 && formData.skills.length > 0;
 
@@ -138,6 +189,46 @@ export function SignUpForm() {
                       required
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="password"
+                      name="password"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Create a password"
+                      className="input-field pl-11"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  {passwordTooShort && (
+                    <p className="text-sm text-destructive">Password must be at least 8 characters</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Confirm Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="password"
+                      name="confirmPassword"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="Re-enter your password"
+                      className="input-field pl-11"
+                      required
+                      minLength={8}
+                    />
+                  </div>
+                  {passwordMismatch && (
+                    <p className="text-sm text-destructive">Passwords do not match</p>
+                  )}
                 </div>
 
                 <Button

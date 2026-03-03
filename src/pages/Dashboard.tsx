@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { getToken } from '@/lib/auth';
 import { Sidebar } from '@/components/dashboard/Sidebar';
 import { TopNav } from '@/components/dashboard/TopNav';
 import { CommunityFeed } from '@/components/dashboard/CommunityFeed';
@@ -10,13 +10,13 @@ import { FindCEOPage } from '@/components/dashboard/FindCEOPage';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
-  const { isAuthenticated } = useAuth();
+  const token = getToken();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
-  if (!isAuthenticated) {
-    return <Navigate to="/" replace />;
+  if (!token) {
+    return <Navigate to="/login" replace />;
   }
 
   const navigateToMessages = (personName: string) => {

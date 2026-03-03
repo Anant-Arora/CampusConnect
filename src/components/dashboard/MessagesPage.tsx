@@ -1,8 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Search, Send, MoreVertical, Phone, Video, Smile, Paperclip } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useConversations, useMessages, useSendMessage } from '@/hooks/useMessages';
 
 interface Conversation {
   id: string;
@@ -20,35 +21,6 @@ interface Message {
   content: string;
   timestamp: Date;
 }
-
-const sampleConversations: Conversation[] = [
-  { id: '1', name: 'Sarah Chen', college: 'MIT', lastMessage: 'That sounds great! Let me know when you want to work on the project.', lastMessageTime: new Date(Date.now() - 1000 * 60 * 5), unreadCount: 2, isOnline: true },
-  { id: '2', name: 'James Rodriguez', college: 'Stanford', lastMessage: 'See you at the hackathon!', lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), unreadCount: 0, isOnline: true },
-  { id: '3', name: 'Priya Sharma', college: 'Carnegie Mellon', lastMessage: 'Thanks for sharing the resources!', lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24), unreadCount: 0, isOnline: false },
-  { id: '4', name: 'Alex Kim', college: 'Berkeley', lastMessage: 'The workshop was amazing yesterday', lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 48), unreadCount: 0, isOnline: false },
-];
-
-const initialMessages: Record<string, Message[]> = {
-  '1': [
-    { id: '1', senderId: '1', content: 'Hey! I saw your post about the ML project', timestamp: new Date(Date.now() - 1000 * 60 * 30) },
-    { id: '2', senderId: 'me', content: "Hi Sarah! Yes, I'm looking for collaborators", timestamp: new Date(Date.now() - 1000 * 60 * 25) },
-    { id: '3', senderId: '1', content: "I'd love to join! I have experience with neural networks", timestamp: new Date(Date.now() - 1000 * 60 * 20) },
-    { id: '4', senderId: 'me', content: "That's perfect! We're using PyTorch for the implementation", timestamp: new Date(Date.now() - 1000 * 60 * 15) },
-    { id: '5', senderId: '1', content: 'That sounds great! Let me know when you want to work on the project.', timestamp: new Date(Date.now() - 1000 * 60 * 5) },
-  ],
-  '2': [
-    { id: '1', senderId: '2', content: 'Are you going to the hackathon?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3) },
-    { id: '2', senderId: 'me', content: 'Yes! Looking forward to it', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5) },
-    { id: '3', senderId: '2', content: 'See you at the hackathon!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2) },
-  ],
-  '3': [
-    { id: '1', senderId: 'me', content: 'Hey Priya, here are the system design resources', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25) },
-    { id: '2', senderId: '3', content: 'Thanks for sharing the resources!', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-  ],
-  '4': [
-    { id: '1', senderId: '4', content: 'The workshop was amazing yesterday', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 48) },
-  ],
-};
 
 function formatTime(date: Date): string {
   const now = new Date();
@@ -164,36 +136,57 @@ function ChatArea({ conversation, messages, onSendMessage }: { conversation: Con
 }
 
 export function MessagesPage() {
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(sampleConversations[0]);
+  const { user } = useAuth();
+  const conversationsQuery = useConversations();
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [allMessages, setAllMessages] = useState<Record<string, Message[]>>(initialMessages);
-  const [conversations, setConversations] = useState<Conversation[]>(sampleConversations);
+  const sendMessage = useSendMessage();
+
+  const conversations: Conversation[] = useMemo(() => {
+    const raw = conversationsQuery.data ?? [];
+    return raw.map((c: any) => ({
+      id: c.id,
+      name: c.otherParticipant?.fullName ?? 'Unknown',
+      college: '',
+      lastMessage: c.lastMessage ?? '',
+      lastMessageTime: c.lastMessageAt ? new Date(c.lastMessageAt) : new Date(0),
+      unreadCount: c.unreadCount ?? 0,
+      isOnline: !!c.otherParticipant?.isOnline,
+    }));
+  }, [conversationsQuery.data]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("campusconnect_selected_conversation_id");
+    if (stored) {
+      setSelectedConversationId(stored);
+      localStorage.removeItem("campusconnect_selected_conversation_id");
+      return;
+    }
+    if (!selectedConversationId && conversations.length > 0) {
+      setSelectedConversationId(conversations[0].id);
+    }
+  }, [conversations, selectedConversationId]);
+
+  const selectedConversation = conversations.find((c) => c.id === selectedConversationId) ?? null;
 
   const filteredConversations = conversations.filter((conv) =>
     conv.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const currentMessages = selectedConversation ? (allMessages[selectedConversation.id] || []) : [];
+  const messagesQuery = useMessages(selectedConversationId);
+  const currentMessages: Message[] = useMemo(() => {
+    const raw = messagesQuery.data ?? [];
+    return raw.map((m: any) => ({
+      id: m.id,
+      senderId: m.senderId === user?.id ? 'me' : m.senderId,
+      content: m.content,
+      timestamp: new Date(m.createdAt),
+    }));
+  }, [messagesQuery.data, user?.id]);
 
   const handleSendMessage = (content: string) => {
-    if (!selectedConversation) return;
-    const newMsg: Message = {
-      id: Date.now().toString(),
-      senderId: 'me',
-      content,
-      timestamp: new Date(),
-    };
-    setAllMessages((prev) => ({
-      ...prev,
-      [selectedConversation.id]: [...(prev[selectedConversation.id] || []), newMsg],
-    }));
-    setConversations((prev) =>
-      prev.map((c) =>
-        c.id === selectedConversation.id
-          ? { ...c, lastMessage: content, lastMessageTime: new Date() }
-          : c
-      )
-    );
+    if (!selectedConversationId) return;
+    sendMessage.mutate({ conversationId: selectedConversationId, content });
   };
 
   return (
@@ -207,7 +200,12 @@ export function MessagesPage() {
           </div>
           <div className="flex-1 overflow-y-auto space-y-1">
             {filteredConversations.map((conversation) => (
-              <ConversationItem key={conversation.id} conversation={conversation} isSelected={selectedConversation?.id === conversation.id} onClick={() => setSelectedConversation(conversation)} />
+              <ConversationItem
+                key={conversation.id}
+                conversation={conversation}
+                isSelected={selectedConversationId === conversation.id}
+                onClick={() => setSelectedConversationId(conversation.id)}
+              />
             ))}
           </div>
         </div>

@@ -7,6 +7,8 @@ import { CommunityFeed } from '@/components/dashboard/CommunityFeed';
 import { OpportunitiesPage } from '@/components/dashboard/OpportunitiesPage';
 import { MessagesPage } from '@/components/dashboard/MessagesPage';
 import { FindCEOPage } from '@/components/dashboard/FindCEOPage';
+import { NotificationsPage } from '@/components/dashboard/NotificationsPage';
+import { SettingsPage } from '@/components/dashboard/SettingsPage';
 import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
@@ -31,6 +33,10 @@ export default function Dashboard() {
         return <FindCEOPage onNavigateToMessages={navigateToMessages} />;
       case '/dashboard/messages':
         return <MessagesPage />;
+      case '/dashboard/notifications':
+        return <NotificationsPage />;
+      case '/dashboard/settings':
+        return <SettingsPage />;
       default:
         return <CommunityFeed />;
     }

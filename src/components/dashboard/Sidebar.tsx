@@ -45,7 +45,7 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
             <GraduationCap className="w-5 h-5 text-primary" />
           </div>
           {!isCollapsed && (
-            <span className="font-semibold text-foreground whitespace-nowrap">CampusConnect</span>
+            <span className="font-semibold text-white whitespace-nowrap">CampusConnect</span>
           )}
         </div>
         <Button
@@ -114,8 +114,8 @@ export function Sidebar({ isCollapsed, onToggle }: SidebarProps) {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">{user.fullName}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.collegeName}</p>
+              <p className="text-sm font-medium text-white truncate">{user.fullName}</p>
+              <p className="text-xs text-white/60 truncate">{user.collegeName}</p>
             </div>
           </div>
         </div>

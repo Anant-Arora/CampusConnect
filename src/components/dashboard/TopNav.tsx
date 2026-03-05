@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Bell, Menu } from 'lucide-react';
+import { Search, Bell, Menu, Heart, MessageCircle, Briefcase, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications, useMarkAllRead } from '@/hooks/useNotifications';
 import { useGlobalSearch } from '@/hooks/useSearch';
@@ -9,12 +9,56 @@ interface TopNavProps {
   onMenuClick: () => void;
 }
 
+function formatTimeAgo(date: Date): string {
+  const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function getNotificationIcon(type: string) {
+  switch (type) {
+    case 'like': return <Heart className="w-4 h-4 text-red-500" />;
+    case 'comment': return <MessageCircle className="w-4 h-4 text-blue-500" />;
+    case 'message': return <MessageCircle className="w-4 h-4 text-green-500" />;
+    case 'opportunity': return <Briefcase className="w-4 h-4 text-orange-500" />;
+    default: return <Bell className="w-4 h-4 text-muted-foreground" />;
+  }
+}
+
 export function TopNav({ onMenuClick }: TopNavProps) {
   const { user } = useAuth();
   const [q, setQ] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
   const notifications = useNotifications();
   const markAllRead = useMarkAllRead();
   const search = useGlobalSearch(q);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const unreadCount = notifications.data?.unreadCount ?? 0;
+  const notificationList = notifications.data?.notifications ?? [];
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowNotifications(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleBellClick = () => {
+    setShowNotifications(!showNotifications);
+    if (!showNotifications && unreadCount > 0) {
+      markAllRead.mutate();
+    }
+  };
 
   return (
     <header className="h-16 bg-card border-b border-border px-6 flex items-center justify-between">
@@ -28,7 +72,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
         >
           <Menu className="w-5 h-5" />
         </Button>
-        
+
         {/* Search Bar */}
         <div className="relative hidden sm:block">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -63,20 +107,84 @@ export function TopNav({ onMenuClick }: TopNavProps) {
 
       {/* Right Section */}
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative"
-          onClick={() => {
-            if ((notifications.data?.unreadCount ?? 0) > 0) markAllRead.mutate();
-          }}
-        >
-          <Bell className="w-5 h-5" />
-          {(notifications.data?.unreadCount ?? 0) > 0 && (
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-accent rounded-full" />
+
+        {/* Bell Icon + Notification Dropdown */}
+        <div className="relative" ref={dropdownRef}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            onClick={handleBellClick}
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Button>
+
+          {/* Dropdown */}
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 w-80 card-elevated z-50 overflow-hidden rounded-xl shadow-xl">
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                <h3 className="font-semibold text-foreground">Notifications</h3>
+                <div className="flex items-center gap-2">
+                  {unreadCount > 0 && (
+                    <span className="text-xs text-muted-foreground">
+                      {unreadCount} unread
+                    </span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-6 h-6"
+                    onClick={() => setShowNotifications(false)}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Notification List */}
+              <div className="max-h-96 overflow-y-auto">
+                {notificationList.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-10 text-center px-4">
+                    <Bell className="w-10 h-10 text-muted-foreground mb-3" />
+                    <p className="text-sm font-medium text-foreground">All caught up!</p>
+                    <p className="text-xs text-muted-foreground mt-1">No notifications yet</p>
+                  </div>
+                ) : (
+                  notificationList.map((n: any) => (
+                    <div
+                      key={n.id}
+                      className={`flex items-start gap-3 px-4 py-3 border-b border-border last:border-0 hover:bg-muted/50 transition-colors ${!n.isRead ? 'bg-primary/5' : ''}`}
+                    >
+                      {/* Icon */}
+                      <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {getNotificationIcon(n.type)}
+                      </div>
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-foreground leading-snug">{n.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatTimeAgo(new Date(n.createdAt))}
+                        </p>
+                      </div>
+                      {/* Unread dot */}
+                      {!n.isRead && (
+                        <div className="w-2 h-2 bg-primary rounded-full flex-shrink-0 mt-1.5" />
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           )}
-        </Button>
-        
+        </div>
+
+        {/* User Profile */}
         <div className="flex items-center gap-3 pl-3 border-l border-border">
           <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
             <span className="text-sm font-semibold text-primary">

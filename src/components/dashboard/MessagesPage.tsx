@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Send, MoreVertical, Phone, Video, Smile, Paperclip } from 'lucide-react';
+import { Search, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useConversations, useMessages, useSendMessage } from '@/hooks/useMessages';
 
@@ -101,11 +101,6 @@ function ChatArea({ conversation, messages, onSendMessage }: { conversation: Con
             <p className="text-xs text-muted-foreground">{conversation.isOnline ? 'Online' : 'Offline'} · {conversation.college}</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="text-muted-foreground"><Phone className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground"><Video className="w-5 h-5" /></Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground"><MoreVertical className="w-5 h-5" /></Button>
-        </div>
       </div>
 
       <div className="flex-1 p-5 overflow-y-auto space-y-4">
@@ -113,9 +108,9 @@ function ChatArea({ conversation, messages, onSendMessage }: { conversation: Con
           const isMe = message.senderId === 'me';
           return (
             <div key={message.id} className={cn("flex", isMe ? "justify-end" : "justify-start")}>
-              <div className={cn("max-w-[70%] px-4 py-2.5 rounded-2xl", isMe ? "bg-primary text-primary-foreground rounded-br-md" : "bg-muted text-foreground rounded-bl-md")}>
+              <div className={cn("max-w-[70%] px-4 py-2.5 rounded-2xl", isMe ? "bg-orange-500 text-white rounded-br-md" : "bg-muted text-foreground rounded-bl-md")}>
                 <p className="text-sm">{message.content}</p>
-                <p className={cn("text-xs mt-1", isMe ? "text-primary-foreground/70" : "text-muted-foreground")}>{formatTime(message.timestamp)}</p>
+                <p className={cn("text-xs mt-1", isMe ? "text-white/70" : "text-muted-foreground")}>{formatTime(message.timestamp)}</p>
               </div>
             </div>
           );
@@ -125,9 +120,7 @@ function ChatArea({ conversation, messages, onSendMessage }: { conversation: Con
 
       <form onSubmit={handleSend} className="p-4 border-t border-border">
         <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="icon" className="text-muted-foreground flex-shrink-0"><Paperclip className="w-5 h-5" /></Button>
           <input type="text" value={newMessage} onChange={(e) => setNewMessage(e.target.value)} placeholder="Type a message..." className="flex-1 px-4 py-2.5 rounded-full bg-muted border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
-          <Button type="button" variant="ghost" size="icon" className="text-muted-foreground flex-shrink-0"><Smile className="w-5 h-5" /></Button>
           <Button type="submit" size="icon" disabled={!newMessage.trim()} className="flex-shrink-0"><Send className="w-4 h-4" /></Button>
         </div>
       </form>

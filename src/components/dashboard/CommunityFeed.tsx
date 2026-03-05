@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Heart, MessageCircle, Share2, MoreHorizontal, Image, Link2, Send, Search } from 'lucide-react';
-import { useCreatePost, useLikePost, usePosts, useUnlikePost } from '@/hooks/usePosts';
+import { Heart, MessageCircle, Share2, MoreHorizontal, Image, Link2, Send, Search, X } from 'lucide-react';
+import { useCreatePost, useLikePost, usePosts, useUnlikePost, usePostComments, useAddComment } from '@/hooks/usePosts';
 
 type FeedPost = {
   id: string;
   content: string;
+  imageUrl?: string | null;
+  linkUrl?: string | null;
   createdAt: string | Date;
   likesCount: number;
   commentsCount: number;
@@ -25,9 +27,64 @@ function formatTimeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
+function CommentSection({ postId }: { postId: string }) {
+  const commentsQuery = usePostComments(postId);
+  const addComment = useAddComment();
+  const [commentText, setCommentText] = useState('');
+  const { user } = useAuth();
+
+  const comments = commentsQuery.data ?? [];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!commentText.trim()) return;
+    addComment.mutate({ postId, content: commentText.trim() });
+    setCommentText('');
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border space-y-3">
+      {comments.map((comment: any) => (
+        <div key={comment.id} className="flex gap-2">
+          <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-semibold text-primary">
+              {comment.user?.fullName?.charAt(0) ?? '?'}
+            </span>
+          </div>
+          <div className="flex-1 bg-muted rounded-lg px-3 py-2">
+            <p className="text-xs font-medium text-foreground">{comment.user?.fullName}</p>
+            <p className="text-sm text-foreground">{comment.content}</p>
+          </div>
+        </div>
+      ))}
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+          <span className="text-xs font-semibold text-primary">
+            {user?.fullName?.charAt(0) ?? '?'}
+          </span>
+        </div>
+        <div className="flex-1 flex gap-2">
+          <input
+            type="text"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="Write a comment..."
+            className="flex-1 px-3 py-1.5 rounded-full bg-muted border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+          <Button type="submit" size="sm" disabled={!commentText.trim()}>
+            <Send className="w-3 h-3" />
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 function PostCard({ post, onLike, onUnlike }: { post: FeedPost; onLike: (id: string) => void; onUnlike: (id: string) => void }) {
   const [liked, setLiked] = useState(post.hasLiked);
   const [likeCount, setLikeCount] = useState(post.likesCount);
+  const [showComments, setShowComments] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     setLiked(post.hasLiked);
@@ -41,10 +98,17 @@ function PostCard({ post, onLike, onUnlike }: { post: FeedPost; onLike: (id: str
       onUnlike(post.id);
       return;
     }
-
     setLiked(true);
     setLikeCount((prev) => prev + 1);
     onLike(post.id);
+  };
+
+  const handleShare = () => {
+    const text = `${post.user.fullName}: ${post.content}`;
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   return (
@@ -68,38 +132,68 @@ function PostCard({ post, onLike, onUnlike }: { post: FeedPost; onLike: (id: str
 
       <p className="text-foreground leading-relaxed mb-4">{post.content}</p>
 
+      {post.imageUrl && (
+        <img src={post.imageUrl} alt="Post" className="w-full rounded-lg mb-4 object-cover max-h-80" />
+      )}
+
+      {post.linkUrl && (
+        <a href={post.linkUrl} target="_blank" rel="noopener noreferrer" className="block mb-4 px-4 py-2 bg-muted rounded-lg text-sm text-primary hover:underline truncate">
+          🔗 {post.linkUrl}
+        </a>
+      )}
+
       <div className="flex items-center gap-1 pt-3 border-t border-border">
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleLike}
           className={liked ? 'text-red-500 hover:text-red-600' : 'text-muted-foreground'}
         >
           <Heart className={`w-4 h-4 mr-1.5 ${liked ? 'fill-current' : ''}`} />
           {likeCount}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-muted-foreground"
+          onClick={() => setShowComments(!showComments)}
+        >
           <MessageCircle className="w-4 h-4 mr-1.5" />
           {post.commentsCount}
         </Button>
-        <Button variant="ghost" size="sm" className="text-muted-foreground">
+        <Button
+          variant="ghost"
+          size="sm"
+          className={copied ? 'text-green-500' : 'text-muted-foreground'}
+          onClick={handleShare}
+        >
           <Share2 className="w-4 h-4 mr-1.5" />
-          Share
+          {copied ? 'Copied!' : 'Share'}
         </Button>
       </div>
+
+      {showComments && <CommentSection postId={post.id} />}
     </div>
   );
 }
 
-function CreatePostCard({ onPost }: { onPost: (content: string) => void }) {
+function CreatePostCard({ onPost }: { onPost: (content: string, imageUrl?: string, linkUrl?: string) => void }) {
   const { user } = useAuth();
   const [content, setContent] = useState('');
+  const [showImageInput, setShowImageInput] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!content.trim()) return;
-    onPost(content.trim());
+    onPost(content.trim(), imageUrl.trim() || undefined, linkUrl.trim() || undefined);
     setContent('');
+    setImageUrl('');
+    setLinkUrl('');
+    setShowImageInput(false);
+    setShowLinkInput(false);
   };
 
   return (
@@ -119,12 +213,55 @@ function CreatePostCard({ onPost }: { onPost: (content: string) => void }) {
               className="w-full resize-none bg-transparent border-0 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-0 min-h-[80px]"
               rows={3}
             />
+
+            {showImageInput && (
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="Paste image URL..."
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-muted border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <Button type="button" variant="ghost" size="icon" onClick={() => { setShowImageInput(false); setImageUrl(''); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {showLinkInput && (
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="Paste link URL..."
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-muted border-0 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+                <Button type="button" variant="ghost" size="icon" onClick={() => { setShowLinkInput(false); setLinkUrl(''); }}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between pt-3 border-t border-border">
               <div className="flex gap-1">
-                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={showImageInput ? 'text-primary' : 'text-muted-foreground'}
+                  onClick={() => { setShowImageInput(!showImageInput); setShowLinkInput(false); }}
+                >
                   <Image className="w-5 h-5" />
                 </Button>
-                <Button type="button" variant="ghost" size="icon" className="text-muted-foreground">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={showLinkInput ? 'text-primary' : 'text-muted-foreground'}
+                  onClick={() => { setShowLinkInput(!showLinkInput); setShowImageInput(false); }}
+                >
                   <Link2 className="w-5 h-5" />
                 </Button>
               </div>
@@ -148,8 +285,8 @@ export function CommunityFeed() {
   const unlikePost = useUnlikePost();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleNewPost = (content: string) => {
-    createPost.mutate({ content });
+  const handleNewPost = (content: string, imageUrl?: string, linkUrl?: string) => {
+    createPost.mutate({ content, imageUrl, linkUrl });
   };
 
   const allPosts: FeedPost[] = useMemo(() => {
@@ -157,13 +294,14 @@ export function CommunityFeed() {
     return pages.flatMap((p: any) => p.posts) as FeedPost[];
   }, [postsQuery.data]);
 
-  const filteredPosts = allPosts.filter((post) => post.user.fullName.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredPosts = allPosts.filter((post) =>
+    post.user.fullName.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-foreground mb-6">Community Feed</h1>
 
-      {/* Search */}
       <div className="card-elevated p-3 mb-4">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -178,7 +316,7 @@ export function CommunityFeed() {
       </div>
 
       <CreatePostCard onPost={handleNewPost} />
-      
+
       <div className="space-y-4">
         {filteredPosts.map((post, index) => (
           <div key={post.id} style={{ animationDelay: `${index * 0.1}s` }}>
@@ -189,7 +327,7 @@ export function CommunityFeed() {
           <div className="text-center py-12">
             <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="font-medium text-foreground mb-2">No posts found</h3>
-            <p className="text-muted-foreground">No posts match "{searchQuery}"</p>
+            <p className="text-muted-foreground">No posts match your search</p>
           </div>
         )}
       </div>

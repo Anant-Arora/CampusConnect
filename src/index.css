@@ -45,14 +45,14 @@
     --shadow-medium: 0 4px 16px -4px hsl(220 20% 14% / 0.12);
     --shadow-elevated: 0 8px 32px -8px hsl(220 20% 14% / 0.16);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 20% 25%;
-    --sidebar-primary: 230 70% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 95%;
-    --sidebar-accent-foreground: 220 20% 20%;
-    --sidebar-border: 220 15% 90%;
-    --sidebar-ring: 230 70% 50%;
+    --sidebar-background: 222 47% 8%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 222 47% 8%;
+    --sidebar-accent: 0 0% 100% / 0.1;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 100% / 0.08;
+    --sidebar-ring: 0 0% 100%;
   }
 
   .dark {
@@ -147,15 +147,15 @@
   }
 
   .nav-link {
-    @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-muted-foreground transition-all duration-200;
+  @apply flex items-center gap-3 px-4 py-2.5 rounded-lg text-white/60 transition-all duration-200;
   }
 
   .nav-link:hover {
-    @apply bg-sidebar-accent text-sidebar-accent-foreground;
+  @apply bg-white/10 text-white;
   }
 
   .nav-link.active {
-    @apply bg-primary/10 text-primary font-medium;
+  @apply bg-white/15 text-white font-medium;
   }
 }
 

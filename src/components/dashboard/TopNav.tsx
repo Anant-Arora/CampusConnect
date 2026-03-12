@@ -126,26 +126,29 @@ export function TopNav({ onMenuClick }: TopNavProps) {
             <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up" onClick={(e) => e.stopPropagation()}>
 
               {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Info className="w-5 h-5 text-primary" />
-                  </div>
-                  <h2 className="text-xl font-bold text-foreground">About CampusConnect</h2>
-                </div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-foreground">About CampusConnect</h2>
                 <Button variant="ghost" size="icon" onClick={() => setShowAbout(false)}>
                   <X className="w-4 h-4" />
                 </Button>
               </div>
 
+              {/* Logo */}
+              <div className="flex justify-center mb-6">
+                <img
+                  src="https://i.postimg.cc/JzQ2rvSx/Happiness-Logo.jpg"
+                  alt="Amity Happiness Club"
+                  className="w-28 h-28 rounded-full object-cover shadow-md border-4 border-primary/20"
+                />
+              </div>
+
               {/* App Description */}
               <p className="text-sm text-muted-foreground leading-relaxed mb-6">
-                CampusConnect is a college networking platform designed to help students discover opportunities, connect with talented peers, and grow together as a community.
+                CampusConnect is a college networking platform designed to help students discover opportunities, connect with talented peers, and grow together as a community. This project was made under the guidance of Prof. (Dr.) Nitin Arora.
               </p>
 
               {/* Divider */}
               <div className="border-t border-border mb-6" />
-
               {/* Developers Section */}
               <h3 className="text-sm font-semibold text-foreground mb-4">👨‍💻 Developed By</h3>
               <div className="space-y-3">
@@ -160,6 +163,22 @@ export function TopNav({ onMenuClick }: TopNavProps) {
                   </div>
                 </div>
 
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-primary">S</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Shriya Dwivedi</p>
+                    <p className="text-xs text-muted-foreground">Btech CSE (Data Science) · Amity University</p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Guidance Section */}
+              <div className="mt-4 p-3 rounded-xl bg-muted/50">
+                <p className="text-xs text-muted-foreground">🎓 Made under the guidance of</p>
+                <p className="text-sm font-medium text-foreground mt-0.5">Prof. (Dr.) Nitin Arora</p>
               </div>
 
               {/* Divider */}

@@ -7,13 +7,13 @@ import { useLogin, useRegister } from '@/hooks/useAuth';
 import { saveUser as saveStoredUser } from '@/lib/auth';
 
 const INTEREST_OPTIONS = [
-  'Technology', 'Design', 'Business', 'Arts', 'Science', 
+  'Technology', 'Design', 'Business', 'Arts', 'Science',
   'Sports', 'Music', 'Writing', 'Photography', 'Gaming'
 ];
 
 const SKILL_OPTIONS = [
-  'Programming', 'UI/UX Design', 'Data Analysis', 'Marketing', 
-  'Video Editing', 'Public Speaking', 'Writing', 'Leadership', 
+  'Programming', 'UI/UX Design', 'Data Analysis', 'Marketing',
+  'Video Editing', 'Public Speaking', 'Writing', 'Leadership',
   'Project Management', 'Research'
 ];
 
@@ -22,6 +22,9 @@ export function SignUpForm() {
   const registerMutation = useRegister();
   const loginMutation = useLogin();
   const [step, setStep] = useState(1);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -60,13 +63,21 @@ export function SignUpForm() {
     createdAt: u.createdAt ? new Date(u.createdAt) : new Date(),
   });
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await loginMutation.mutateAsync({ email: loginEmail, password: loginPassword });
+    } catch (err: any) {
+      const message = err?.response?.data?.error ?? 'Invalid email or password';
+      alert(message);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     const password = formData.password;
     if (password.length < 8) return;
     if (formData.confirmPassword !== password) return;
-
     const payload = {
       fullName: formData.fullName,
       email: formData.email,
@@ -76,7 +87,6 @@ export function SignUpForm() {
       degree: formData.degree,
       skills: formData.skills,
     };
-
     try {
       await registerMutation.mutateAsync(payload);
     } catch (err: any) {
@@ -86,22 +96,15 @@ export function SignUpForm() {
   };
 
   const passwordTooShort = formData.password.length > 0 && formData.password.length < 8;
-  const passwordMismatch =
-    formData.confirmPassword.length > 0 && formData.confirmPassword !== formData.password;
-
-  const canProceedStep1 =
-    formData.fullName &&
-    formData.email &&
-    formData.phone &&
-    formData.password.length >= 8 &&
-    formData.confirmPassword &&
-    !passwordMismatch;
+  const passwordMismatch = formData.confirmPassword.length > 0 && formData.confirmPassword !== formData.password;
+  const canProceedStep1 = formData.fullName && formData.email && formData.phone && formData.password.length >= 8 && formData.confirmPassword && !passwordMismatch;
   const canProceedStep2 = formData.collegeName && formData.degree;
   const canSubmit = formData.interests.length > 0 && formData.skills.length > 0;
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-lg animate-fade-in">
+
         {/* Logo & Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
@@ -126,106 +129,49 @@ export function SignUpForm() {
         {/* Form Card */}
         <div className="card-elevated p-8">
           <form onSubmit={handleSubmit}>
+
             {/* Step 1: Personal Info */}
             {step === 1 && (
               <div className="space-y-5 animate-slide-up">
                 <h2 className="text-lg font-semibold text-foreground mb-4">Personal Information</h2>
-                
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Full Name</label>
                   <div className="relative">
                     <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      placeholder="Enter your full name"
-                      className="input-field pl-11"
-                      required
-                    />
+                    <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange} placeholder="Enter your full name" className="input-field pl-11" required />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Email ID</label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      placeholder="you@college.edu"
-                      className="input-field pl-11"
-                      required
-                    />
+                    <input type="email" name="email" value={formData.email} onChange={handleInputChange} placeholder="you@college.edu" className="input-field pl-11" required />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Phone Number</label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleInputChange}
-                      placeholder="+1 (555) 000-0000"
-                      className="input-field pl-11"
-                      required
-                    />
+                    <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} placeholder="+1 (555) 000-0000" className="input-field pl-11" required />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="password"
-                      name="password"
-                      value={formData.password}
-                      onChange={handleInputChange}
-                      placeholder="Create a password"
-                      className="input-field pl-11"
-                      required
-                      minLength={8}
-                    />
+                    <input type="password" name="password" value={formData.password} onChange={handleInputChange} placeholder="Create a password" className="input-field pl-11" required minLength={8} />
                   </div>
-                  {passwordTooShort && (
-                    <p className="text-sm text-destructive">Password must be at least 8 characters</p>
-                  )}
+                  {passwordTooShort && <p className="text-sm text-destructive">Password must be at least 8 characters</p>}
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Confirm Password</label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="password"
-                      name="confirmPassword"
-                      value={formData.confirmPassword}
-                      onChange={handleInputChange}
-                      placeholder="Re-enter your password"
-                      className="input-field pl-11"
-                      required
-                      minLength={8}
-                    />
+                    <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleInputChange} placeholder="Re-enter your password" className="input-field pl-11" required minLength={8} />
                   </div>
-                  {passwordMismatch && (
-                    <p className="text-sm text-destructive">Passwords do not match</p>
-                  )}
+                  {passwordMismatch && <p className="text-sm text-destructive">Passwords do not match</p>}
                 </div>
-
-                <Button
-                  type="button"
-                  onClick={() => setStep(2)}
-                  disabled={!canProceedStep1}
-                  className="w-full mt-4"
-                  size="lg"
-                >
+                <Button type="button" onClick={() => setStep(2)} disabled={!canProceedStep1} className="w-full mt-4" size="lg">
                   Continue <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </div>
@@ -235,56 +181,23 @@ export function SignUpForm() {
             {step === 2 && (
               <div className="space-y-5 animate-slide-up">
                 <h2 className="text-lg font-semibold text-foreground mb-4">Academic Details</h2>
-                
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">College Name</label>
                   <div className="relative">
                     <GraduationCap className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      name="collegeName"
-                      value={formData.collegeName}
-                      onChange={handleInputChange}
-                      placeholder="e.g., Stanford University"
-                      className="input-field pl-11"
-                      required
-                    />
+                    <input type="text" name="collegeName" value={formData.collegeName} onChange={handleInputChange} placeholder="e.g., Stanford University" className="input-field pl-11" required />
                   </div>
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Degree / Program</label>
                   <div className="relative">
                     <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <input
-                      type="text"
-                      name="degree"
-                      value={formData.degree}
-                      onChange={handleInputChange}
-                      placeholder="e.g., B.Tech Computer Science"
-                      className="input-field pl-11"
-                      required
-                    />
+                    <input type="text" name="degree" value={formData.degree} onChange={handleInputChange} placeholder="e.g., B.Tech Computer Science" className="input-field pl-11" required />
                   </div>
                 </div>
-
                 <div className="flex gap-3 mt-4">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setStep(1)}
-                    className="flex-1"
-                    size="lg"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setStep(3)}
-                    disabled={!canProceedStep2}
-                    className="flex-1"
-                    size="lg"
-                  >
+                  <Button type="button" variant="secondary" onClick={() => setStep(1)} className="flex-1" size="lg">Back</Button>
+                  <Button type="button" onClick={() => setStep(3)} disabled={!canProceedStep2} className="flex-1" size="lg">
                     Continue <ArrowRight className="w-4 h-4 ml-1" />
                   </Button>
                 </div>
@@ -302,22 +215,13 @@ export function SignUpForm() {
                   <p className="text-sm text-muted-foreground mb-3">Select up to 5 interests</p>
                   <div className="flex flex-wrap gap-2">
                     {INTEREST_OPTIONS.map((interest) => (
-                      <button
-                        key={interest}
-                        type="button"
-                        onClick={() => toggleSelection('interests', interest)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          formData.interests.includes(interest)
-                            ? 'bg-accent text-accent-foreground'
-                            : 'bg-muted text-muted-foreground hover:bg-secondary'
-                        }`}
-                      >
+                      <button key={interest} type="button" onClick={() => toggleSelection('interests', interest)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${formData.interests.includes(interest) ? 'bg-accent text-accent-foreground' : 'bg-muted text-muted-foreground hover:bg-secondary'}`}>
                         {interest}
                       </button>
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <div className="flex items-center gap-2 mb-3">
                     <Briefcase className="w-5 h-5 text-primary" />
@@ -326,50 +230,62 @@ export function SignUpForm() {
                   <p className="text-sm text-muted-foreground mb-3">Select up to 5 skills</p>
                   <div className="flex flex-wrap gap-2">
                     {SKILL_OPTIONS.map((skill) => (
-                      <button
-                        key={skill}
-                        type="button"
-                        onClick={() => toggleSelection('skills', skill)}
-                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
-                          formData.skills.includes(skill)
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted text-muted-foreground hover:bg-secondary'
-                        }`}
-                      >
+                      <button key={skill} type="button" onClick={() => toggleSelection('skills', skill)}
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${formData.skills.includes(skill) ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-secondary'}`}>
                         {skill}
                       </button>
                     ))}
                   </div>
                 </div>
-
                 <div className="flex gap-3 mt-4">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setStep(2)}
-                    className="flex-1"
-                    size="lg"
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={!canSubmit}
-                    variant="gradient"
-                    className="flex-1"
-                    size="lg"
-                  >
-                    Get Started
-                  </Button>
+                  <Button type="button" variant="secondary" onClick={() => setStep(2)} className="flex-1" size="lg">Back</Button>
+                  <Button type="submit" disabled={!canSubmit} className="flex-1" size="lg">Get Started</Button>
                 </div>
               </div>
             )}
+
           </form>
         </div>
 
+        {/* Login Link */}
         <p className="text-center text-sm text-muted-foreground mt-6">
-          By continuing, you agree to our Terms of Service and Privacy Policy
+          Already have an account?{' '}
+          <button type="button" onClick={() => setShowLogin(true)} className="text-primary font-medium hover:underline">
+            Login here
+          </button>
         </p>
+
+        {/* Login Popup */}
+        {showLogin && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowLogin(false)}>
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-8 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+              <h2 className="text-xl font-bold text-foreground mb-6">Welcome Back</h2>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="you@college.edu" className="input-field pl-11" required />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Password</label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} placeholder="Enter your password" className="input-field pl-11" required />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full" size="lg" disabled={loginMutation.isPending}>
+                  {loginMutation.isPending ? 'Logging in...' : 'Login'}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={() => setShowLogin(false)}>
+                  Back to Register
+                </Button>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );

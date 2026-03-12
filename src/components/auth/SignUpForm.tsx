@@ -78,22 +78,10 @@ export function SignUpForm() {
     };
 
     try {
-      const resp = await loginMutation.mutateAsync({ email: payload.email, password: payload.password });
-      if (resp.success) {
-        const mapped = mapBackendUserToFrontend(resp.data.user);
-        saveStoredUser(mapped);
-        login(mapped);
-        return;
-      }
-    } catch {
-      // ignore and fall back to registration
-    }
-
-    const resp = await registerMutation.mutateAsync(payload);
-    if (resp.success) {
-      const mapped = mapBackendUserToFrontend(resp.data.user);
-      saveStoredUser(mapped);
-      login(mapped);
+      await registerMutation.mutateAsync(payload);
+    } catch (err: any) {
+      const message = err?.response?.data?.error ?? 'Registration failed. Please try again.';
+      alert(message);
     }
   };
 

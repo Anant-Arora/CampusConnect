@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Bell, Menu, Heart, MessageCircle, Briefcase, X } from 'lucide-react';
+import { Search, Bell, Menu, Heart, MessageCircle, Briefcase, X, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNotifications, useMarkAllRead } from '@/hooks/useNotifications';
 import { useGlobalSearch } from '@/hooks/useSearch';
@@ -34,6 +34,7 @@ export function TopNav({ onMenuClick }: TopNavProps) {
   const { user } = useAuth();
   const [q, setQ] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const notifications = useNotifications();
   const markAllRead = useMarkAllRead();
   const search = useGlobalSearch(q);
@@ -107,6 +108,72 @@ export function TopNav({ onMenuClick }: TopNavProps) {
 
       {/* Right Section */}
       <div className="flex items-center gap-3">
+
+        {/* About Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setShowAbout(true)}
+          className="text-muted-foreground hover:text-foreground flex items-center gap-1.5"
+        >
+          <Info className="w-4 h-4" />
+          <span className="hidden sm:inline text-sm">About</span>
+        </Button>
+
+        {/* About Popup Overlay */}
+        {showAbout && (
+          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowAbout(false)}>
+            <div className="bg-card rounded-2xl shadow-2xl w-full max-w-md p-6 animate-slide-up" onClick={(e) => e.stopPropagation()}>
+
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Info className="w-5 h-5 text-primary" />
+                  </div>
+                  <h2 className="text-xl font-bold text-foreground">About CampusConnect</h2>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setShowAbout(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {/* App Description */}
+              <p className="text-sm text-muted-foreground leading-relaxed mb-6">
+                CampusConnect is a college networking platform designed to help students discover opportunities, connect with talented peers, and grow together as a community.
+              </p>
+
+              {/* Divider */}
+              <div className="border-t border-border mb-6" />
+
+              {/* Developers Section */}
+              <h3 className="text-sm font-semibold text-foreground mb-4">👨‍💻 Developed By</h3>
+              <div className="space-y-3">
+
+                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <span className="text-sm font-bold text-primary">A</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Anant Arora</p>
+                    <p className="text-xs text-muted-foreground">Btech CSE (Data Science) · Amity University</p>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-border mt-6 mb-4" />
+
+              {/* Version */}
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Version 1.0.0</p>
+                <p className="text-xs text-muted-foreground">© 2026 CampusConnect</p>
+              </div>
+
+            </div>
+          </div>
+        )}
 
         {/* Bell Icon + Notification Dropdown */}
         <div className="relative" ref={dropdownRef}>

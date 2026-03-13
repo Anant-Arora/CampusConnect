@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 
 export default function Dashboard() {
   const token = getToken();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,17 +45,28 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar 
-        isCollapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+
+      {/* Mobile overlay — closes sidebar when clicking outside */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      <Sidebar
+        isCollapsed={sidebarCollapsed}
+        isMobileOpen={sidebarOpen}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        onMobileClose={() => setSidebarOpen(false)}
       />
-      
+
       <div className={cn(
         "transition-all duration-300",
         sidebarCollapsed ? "lg:ml-16" : "lg:ml-64"
       )}>
-        <TopNav onMenuClick={() => setSidebarCollapsed(!sidebarCollapsed)} />
-        
+        <TopNav onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+
         <main className="p-6">
           {renderContent()}
         </main>

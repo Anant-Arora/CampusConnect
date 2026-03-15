@@ -343,6 +343,6 @@ http://localhost:8080
 
 # 📄 License
 
-This project was developed for **academic purposes at Amity University** under the Happiness Center initiative.
+This project was developed for **academic purposes at Amity University** under the Amity Happiness Center initiative.
 
 © 2026 CampusConnect — Anant Arora & Shriya Dwivedi
